@@ -14,6 +14,8 @@ app.use(cookieParser()); // cookie-parser
 
 // Basic Strategy
 require('./utils/auth/strategies/basic');
+// OAuth2 Strategy
+require('./utils/auth/strategies/oauth');
 // Agregamos las variables de timpo en segundos
 const THIRTY_DAYS_IN_SEC = 2592000;
 const TWO_HOURS_IN_SEC = 7200;
@@ -135,6 +137,32 @@ app.delete("/user-movies/:userMovieId", async function (req, res, next) {
   }
 });
 
-app.listen(config.port, function() {
+app.get(
+  "/auth/google-oauth",
+  passport.authenticate("google-oauth", {
+    scope: ["email", "profile", "openid"]
+  })
+);
+
+app.get(
+  "/auth/google-oauth/callback",
+  passport.authenticate("google-oauth", { session: false }),
+  function(req, res, next) {
+    if (!req.user) {
+      next(boom.unauthorized());
+    }
+
+    const { token, ...user } = req.user;
+
+    res.cookie("token", token, {
+      httpOnly: !config.dev,
+      secure: !config.dev
+    });
+
+    res.status(200).json(user);
+  }
+);
+
+app.listen(config.port, function () {
   console.log(`Listening http://localhost:${config.port}`);
 });
